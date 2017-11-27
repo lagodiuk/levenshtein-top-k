@@ -22,16 +22,33 @@ import java.util.List;
 public class LevenshteinTopK {
 
 	public static void main(String[] args) {
-		// calculate("frankfurt", "frnkfurt", 100);
-		// calculate("abc", "abc", 100);
-		// calculate("abcd", "axyd", 10);
-		calculate("101011001101", "1101010111010", 100);
+		//printAlignment("frankfurt", "frnkfurt", 100);
+		printAlignment("abc", "abc", 100);
+		//printAlignment("abcd", "axyd", 10);
+		//printAlignment("101011001101", "1101010111010", 100);
 	}
 
-	private static final int BOUNDARY = -10;
+	static void printAlignment(String s1, String s2, int topK) {
+		List<Alignment> result = calculate(s1, s2, topK);
+		System.out.println("Total amount of results: " + result.size());
+		System.out.println();
+		for(Alignment alignment : result) {
+			System.out.println("Edit distance:" + alignment.editDist);
+			System.out.println("s1 aligned: " + alignment.alignedStr1);
+			System.out.println("s2 aligned: " + alignment.alignedStr2);
+			System.out.println("common str: " + alignment.commonStr);
+			System.out.println();
+		}
+	}
+
 	private static final int INSERTION_COST = 1;
 	private static final int DELETION_COST = 1;
 	private static final int SUBSTITUTION_COST = 1;
+	private static final char DEFAULT_GAP_CHAR = '_';
+
+	static List<Alignment> calculate(String s1, String s2, int topK) {
+		return calculate(s1, s2, topK, DEFAULT_GAP_CHAR);
+	}
 
 	/**
 	 * Complexity: O(M*N*K*log(N*K)) - if arraylist + sorting will be used
@@ -40,30 +57,33 @@ public class LevenshteinTopK {
 	 *
 	 * Complexity: O(M*N*K) - if Quickselect algorithm will be used
 	 */
-	static void calculate(String s1, String s2, int topK) {
-
-		Cell[][][] mem = new Cell[s1.length() + 1][s2.length() + 1][];
+	static List<Alignment> calculate(
+			String s1,
+			String s2,
+			int topK,
+			char gap) {
 
 		int rows = s1.length() + 1;
 		int cols = s2.length() + 1;
 
-		mem[0][0] = new Cell[]{new Cell(0, BOUNDARY, BOUNDARY, BOUNDARY)};
-
+		// Initialization of the memoization table
+		Cell[][][] mem = new Cell[rows][cols][];
+		mem[0][0] = new Cell[]{new Cell(0)};
 		for (int row = 0; row < rows; row++) {
 			mem[row][0] = new Cell[]{new Cell(row, -1, 0, 0)};
 		}
-
 		for (int col = 0; col < cols; col++) {
 			mem[0][col] = new Cell[]{new Cell(col, 0, -1, 0)};
 		}
 
+		// Calculation of the memoization table
 		for (int row = 1; row < rows; row++) {
 			char s1Char = s1.charAt(row - 1);
 
 			for (int col = 1; col < cols; col++) {
 				char s2Char = s2.charAt(col - 1);
 
-				int subCost = s1Char == s2Char ? 0 : SUBSTITUTION_COST;
+				int subCost = (s1Char == s2Char) ? 0 : SUBSTITUTION_COST;
 
 				// TODO: use either min-heap, or Quickselect algorithm
 				List<Cell> candidates = new ArrayList<>();
@@ -89,20 +109,25 @@ public class LevenshteinTopK {
 			}
 		}
 
-		System.out.println("Total amount of results: " + mem[s1.length()][s2.length()].length);
-		System.out.println();
-
+		List<Alignment> result = new ArrayList<>();
 		for (Cell last : mem[s1.length()][s2.length()]) {
-			traceBack(s1, s2, mem, last);
+			Alignment alignment = traceBack(s1, s2, mem, last, gap);
+			result.add(alignment);
 		}
+		return result;
 	}
 
-	private static void traceBack(String s1, String s2, Cell[][][] mem, Cell last) {
+	private static Alignment traceBack(
+			String s1,
+			String s2,
+			Cell[][][] mem,
+			Cell last,
+			char gap) {
 
 		int dist = last.dist;
 
-		StringBuilder s1Aligned = new StringBuilder();
-		StringBuilder s2Aligned = new StringBuilder();
+		StringBuilder alignedS1 = new StringBuilder();
+		StringBuilder alignedS2 = new StringBuilder();
 		StringBuilder commonStr = new StringBuilder();
 
 		// "r" is row
@@ -115,26 +140,29 @@ public class LevenshteinTopK {
 		while (r >= 1 || c >= 1) {
 
 			if (curr.deltRow == -1 && curr.deltCol == 0) {
+				// Insertion
 				char s1Char = s1.charAt(r - 1);
-				s1Aligned.append(s1Char);
-				s2Aligned.append("_");
-				commonStr.append("_");
+				alignedS1.append(s1Char);
+				alignedS2.append(gap);
+				commonStr.append(gap);
 			} else if (curr.deltRow == 0 && curr.deltCol == -1) {
+				// Deletion
 				char s2Char = s2.charAt(c - 1);
-				s1Aligned.append("_");
-				s2Aligned.append(s2Char);
-				commonStr.append("_");
+				alignedS1.append(gap);
+				alignedS2.append(s2Char);
+				commonStr.append(gap);
 			} else if (curr.deltRow == -1 && curr.deltCol == -1) {
+				// Substitution
 				char s1Char = s1.charAt(r - 1);
 				char s2Char = s2.charAt(c - 1);
 				if (s1Char == s2Char) {
-					s1Aligned.append(s1Char);
-					s2Aligned.append(s2Char);
+					alignedS1.append(s1Char);
+					alignedS2.append(s2Char);
 					commonStr.append(s1Char);
 				} else {
-					s1Aligned.append(s1Char);
-					s2Aligned.append(s2Char);
-					commonStr.append("_");
+					alignedS1.append(s1Char);
+					alignedS2.append(s2Char);
+					commonStr.append(gap);
 				}
 			}
 
@@ -143,23 +171,57 @@ public class LevenshteinTopK {
 			curr = mem[r][c][curr.prevTopK];
 		}
 
-		System.out.println("Edit distance:" + dist);
-		System.out.println("s1 aligned: " + s1Aligned.reverse().toString());
-		System.out.println("s2 aligned: " + s2Aligned.reverse().toString());
-		System.out.println("common str: " + commonStr.reverse().toString());
-		System.out.println();
+		return new Alignment(
+				dist,
+				alignedS1.reverse().toString(),
+				alignedS2.reverse().toString(),
+				commonStr.reverse().toString(),
+				gap);
 	}
 
-	static class Cell {
+	private static class Cell {
 		public final int dist;
+		// TODO: deltRow and deltCol can be stored inside one int field
 		public final int deltRow;
 		public final int deltCol;
 		public final int prevTopK;
-		public Cell(int dist, int deltRow, int deltCol, int prevTopK) {
+
+		public Cell(int dist) {
+			this(dist, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
+		}
+
+		public Cell(
+				int dist,
+				int deltRow,
+				int deltCol,
+				int prevTopK) {
+
 			this.dist = dist;
 			this.deltRow = deltRow;
 			this.deltCol = deltCol;
 			this.prevTopK = prevTopK;
+		}
+	}
+
+	public static class Alignment {
+		public final int editDist;
+		public final String alignedStr1;
+		public final String alignedStr2;
+		public final String commonStr;
+		public final char gapChar;
+
+		public Alignment(
+				int editDist,
+				String alignedStr1,
+				String alignedStr2,
+				String commonStr,
+				char gapChar) {
+
+			this.editDist = editDist;
+			this.alignedStr1 = alignedStr1;
+			this.alignedStr2 = alignedStr2;
+			this.commonStr = commonStr;
+			this.gapChar = gapChar;
 		}
 	}
 }

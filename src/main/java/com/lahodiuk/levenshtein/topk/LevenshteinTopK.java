@@ -23,8 +23,8 @@ public class LevenshteinTopK {
 
     public static void main(String[] args) {
         // printAlignment("frankfurt", "frnkfurt", 100);
-        printAlignment("abc", "abc", 100);
-        // printAlignment("abcd", "axyd", 10);
+        // printAlignment("abc", "abc", 100);
+        printAlignment("abcd", "axyd", 10);
         // printAlignment("101011001101", "1101010111010", 100);
     }
 
@@ -33,10 +33,13 @@ public class LevenshteinTopK {
         System.out.println("Total amount of results: " + result.size());
         System.out.println();
         for (Alignment alignment : result) {
+            System.out.println("=======================================");
+            System.out.println();
             System.out.println("Edit distance:" + alignment.editDist);
             System.out.println("s1 aligned: " + alignment.alignedStr1);
             System.out.println("s2 aligned: " + alignment.alignedStr2);
             System.out.println("common str: " + alignment.commonStr);
+            alignment.printExplanation();
             System.out.println();
         }
     }
@@ -236,6 +239,27 @@ public class LevenshteinTopK {
             this.alignedStr2 = alignedStr2;
             this.commonStr = commonStr;
             this.gapChar = gapChar;
+        }
+
+        public void printExplanation() {
+
+            System.out.println();
+            System.out.println("Transformation of the string s1 to s2:");
+
+            for (int i = 0; i < this.alignedStr1.length(); i++) {
+                char nextCharS1 = this.alignedStr1.charAt(i);
+                char nextCharS2 = this.alignedStr2.charAt(i);
+
+                if (nextCharS1 == this.gapChar) {
+                    System.out.printf("%10s: '%c' %n", "Insert", nextCharS2);
+                } else if (nextCharS2 == this.gapChar) {
+                    System.out.printf("%10s: '%c' %n", "Delete", nextCharS1);
+                } else if (this.alignedStr1.charAt(i) != nextCharS2) {
+                    System.out.printf("%10s: '%c' -> '%c' %n", "Substitute", nextCharS1, nextCharS2);
+                } else {
+                    System.out.printf("%10s: '%c' %n", "Keep", nextCharS1);
+                }
+            }
         }
     }
 }

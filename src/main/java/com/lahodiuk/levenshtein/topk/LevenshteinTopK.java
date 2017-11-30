@@ -44,10 +44,10 @@ public class LevenshteinTopK {
         }
     }
 
-    private static final int INSERTION_COST = 1;
-    private static final int DELETION_COST = 1;
-    private static final int SUBSTITUTION_COST = 1;
-    private static final char DEFAULT_GAP_CHAR = '_';
+    public static final int INSERTION_COST = 1;
+    public static final int DELETION_COST = 1;
+    public static final int SUBSTITUTION_COST = 1;
+    public static final char DEFAULT_GAP_CHAR = '_';
 
     static List<Alignment> getAlignments(
             String s1,

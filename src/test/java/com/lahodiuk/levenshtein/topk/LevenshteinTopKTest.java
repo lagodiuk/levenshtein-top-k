@@ -23,23 +23,25 @@ import java.util.List;
 import org.junit.runner.RunWith;
 
 import com.lahodiuk.levenshtein.topk.LevenshteinTopK.Alignment;
+import com.pholser.junit.quickcheck.From;
 import com.pholser.junit.quickcheck.Property;
-import com.pholser.junit.quickcheck.generator.InRange;
+import com.pholser.junit.quickcheck.generator.GenerationStatus;
+import com.pholser.junit.quickcheck.generator.Generator;
+import com.pholser.junit.quickcheck.random.SourceOfRandomness;
 import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
 
 @RunWith(JUnitQuickcheck.class)
 public class LevenshteinTopKTest {
 
-    private final char gapChar = LevenshteinTopK.DEFAULT_GAP_CHAR;
     private final LevenshteinTopKCalculator alg = LevenshteinTopK::getAlignments;
 
     @Property
     public void alignedStringsHaveTheSameLenth(
-            String s1,
-            String s2,
-            @InRange(min = "1", max = "20") int topK) {
+            @From(InputDataGenerator.class) InputData input) {
 
-        List<Alignment> results = this.alg.getAlignments(s1, s2, topK, this.gapChar);
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
         for (Alignment alignment : results) {
 
             int alignedS1Length = alignment.alignedStr1.length();
@@ -53,17 +55,103 @@ public class LevenshteinTopKTest {
 
     @Property
     public void editDistancesAreIncreasing(
-            String s1,
-            String s2,
-            @InRange(min = "1", max = "20") int topK) {
+            @From(InputDataGenerator.class) InputData input) {
 
-        List<Alignment> results = this.alg.getAlignments(s1, s2, topK, this.gapChar);
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
         for (int i = 1; i < results.size(); i++) {
 
             Alignment curr = results.get(i);
             Alignment prev = results.get(i - 1);
 
             assertTrue(curr.editDist >= prev.editDist);
+        }
+    }
+
+    @Property
+    public void editDistancesMustBeCorrect(
+            @From(InputDataGenerator.class) InputData input) {
+
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        for (Alignment alignment : results) {
+
+            int expectedEditDistance = this.calculateExpectedEditDistance(alignment);
+
+            assertEquals(expectedEditDistance, alignment.editDist);
+        }
+    }
+
+    public int calculateExpectedEditDistance(Alignment alignment) {
+
+        int expectedEditDistance = 0;
+        for (int i = 0; i < alignment.commonStr.length(); i++) {
+
+            char s1Chr = alignment.alignedStr1.charAt(i);
+            char s2Chr = alignment.alignedStr2.charAt(i);
+
+            if (s1Chr == alignment.gapChar && s2Chr != alignment.gapChar) {
+                expectedEditDistance += LevenshteinTopK.INSERTION_COST;
+
+            } else if (s1Chr != alignment.gapChar && s2Chr == alignment.gapChar) {
+                expectedEditDistance += LevenshteinTopK.DELETION_COST;
+
+            } else if (s1Chr != s2Chr) {
+                expectedEditDistance += LevenshteinTopK.SUBSTITUTION_COST;
+            }
+        }
+        return expectedEditDistance;
+    }
+
+    public static class InputData {
+        public final String s1;
+        public final String s2;
+        public final char gapChar;
+        public final int topK;
+
+        public InputData(String s1, String s2, char gapChar, int topK) {
+            this.s1 = s1;
+            this.s2 = s2;
+            this.gapChar = gapChar;
+            this.topK = topK;
+        }
+    }
+
+    public static class InputDataGenerator extends Generator<InputData> {
+
+        public static final int MAX_STRING_LENGTH = 20;
+        public static final int MAX_TOP_K = 100;
+
+        public InputDataGenerator(Class<InputData> type) {
+            super(type);
+        }
+
+        @Override
+        public InputData generate(
+                SourceOfRandomness rnd,
+                GenerationStatus status) {
+
+            char gapChar = rnd.nextChar((char) 0, (char) 255);
+            String s1 = this.generateRandomString(rnd, status, gapChar);
+            String s2 = this.generateRandomString(rnd, status, gapChar);
+            int topK = rnd.nextInt(1, MAX_TOP_K);
+
+            return new InputData(s1, s2, gapChar, topK);
+        }
+
+        public String generateRandomString(
+                SourceOfRandomness rnd,
+                GenerationStatus status,
+                char gapChar) {
+
+            StringBuilder sb = new StringBuilder();
+            int length = rnd.nextInt(1, MAX_STRING_LENGTH);
+            for (int i = 0; i < length; i++) {
+                sb.append(rnd.nextChar('a', 'z'));
+            }
+            return sb.toString().replace(gapChar, '?');
         }
     }
 }

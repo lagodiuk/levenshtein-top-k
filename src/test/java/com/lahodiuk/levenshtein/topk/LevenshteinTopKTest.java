@@ -60,8 +60,9 @@ import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
  * 7) Results must be stable. Given the strings s1 and s2, and the top-K and and
  * top-N results of the LevenshteinTopK algorithm on these strings (the results
  * are the lists of alignments with the smallest edit distances). Let M = min(K,
- * N), then the list of top-M results of the LevenshteinTopK algorithm will be
- * present at the head (prefix) of both other lists: top-K and top-N.
+ * N), then the list of edit distances of the top-M results of the LevenshteinTopK
+ * algorithm will be equal to the list of edit distances of both other results:
+ * top-K and top-N.
  *
  * 8) The edit distance of the first results of the LevenshteinTopK algorithm
  * must be equal to the edit distance, calculated by the Wagner–Fischer
@@ -209,12 +210,12 @@ public class LevenshteinTopKTest {
     }
 
     /**
-     * 7) Results must be stable. Given the strings s1 and s2, and the top-K and
-     * and top-N results of the LevenshteinTopK algorithm on these strings (the
-     * results are the lists of alignments with the smallest edit distances).
-     * Let M = min(K, N), then the list of top-M results of the LevenshteinTopK
-     * algorithm will be present at the head (prefix) of both other lists: top-K
-     * and top-N.
+     * 7) Results must be stable. Given the strings s1 and s2, and the top-K and and
+     * top-N results of the LevenshteinTopK algorithm on these strings (the results
+     * are the lists of alignments with the smallest edit distances). Let M = min(K,
+     * N), then the list of edit distances of the top-M results of the LevenshteinTopK
+     * algorithm will be equal to the list of edit distances of both other results:
+     * top-K and top-N.
      */
     @Property(trials = 200)
     public void stabilityOfResults(
@@ -235,14 +236,14 @@ public class LevenshteinTopKTest {
             Alignment alignmentTopM = resultsTopM.get(i);
             Alignment alignmentTopN = resultsTopN.get(i);
 
-            this.assertEquality(alignmentTopM, alignmentTopN);
+            assertEquals(alignmentTopM.editDist, alignmentTopN.editDist);
         }
 
         for (int i = 0; i < resultsTopM.size(); i++) {
             Alignment alignmentTopM = resultsTopM.get(i);
             Alignment alignmentTopK = resultsTopK.get(i);
 
-            this.assertEquality(alignmentTopM, alignmentTopK);
+            assertEquals(alignmentTopM.editDist, alignmentTopK.editDist);
         }
     }
 
@@ -285,17 +286,6 @@ public class LevenshteinTopKTest {
             assertTrue(alignment.alignedStr2.length() <= maxLength);
             assertTrue(alignment.commonStr.length() <= maxLength);
         }
-    }
-
-    /**
-     * Checking the equality of two different alignments.
-     */
-    public void assertEquality(Alignment a1, Alignment a2) {
-        assertEquals(a1.editDist, a2.editDist);
-        assertEquals(a1.alignedStr1, a2.alignedStr1);
-        assertEquals(a1.alignedStr2, a2.alignedStr2);
-        assertEquals(a1.commonStr, a2.commonStr);
-        assertEquals(a1.gapChar, a2.gapChar);
     }
 
     /**

@@ -16,8 +16,10 @@
 package com.lahodiuk.levenshtein.topk;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 /**
  * The algorithm, which returns top-K different string alignments with the
@@ -54,6 +56,9 @@ import java.util.List;
  *       Keep: 'D'
  *
  * And so forth.
+ *
+ * This implementation makes use of the Quickselect algorithm.
+ * Thus, the expected runtime complexity is: O(M*N*K + K*log(K))
  */
 public class LevenshteinTopK {
 
@@ -95,7 +100,7 @@ public class LevenshteinTopK {
      *
      * Complexity: O(M*N*K*log(K)) - if binary heap will be used
      *
-     * Complexity: O(M*N*K) - if Quickselect algorithm will be used
+     * Complexity: O(M*N*K + K*log(K)) - if Quickselect algorithm will be used
      */
     private static Cell[][][] calculateMemoizationTable(
             String s1,
@@ -115,6 +120,11 @@ public class LevenshteinTopK {
             mem[0][col] = new Cell[] { new Cell(col, 0, -1, 0) };
         }
 
+        // Supplementary array
+        // TODO: use either a min-heap, or the Quickselect algorithm
+        Cell[] candidates = new Cell[3 * topK];
+        int candidatesCount = 0;
+
         // Calculation of the memoization table
         for (int row = 1; row < rows; row++) {
             char s1Char = s1.charAt(row - 1);
@@ -124,30 +134,35 @@ public class LevenshteinTopK {
 
                 int subCost = (s1Char == s2Char) ? 0 : SUBSTITUTION_COST;
 
-                // TODO: use either a min-heap, or the Quickselect algorithm
-                List<Cell> candidates = new ArrayList<>();
+                candidatesCount = 0;
 
                 for (int prevTopK = 0; prevTopK < mem[row - 1][col].length; prevTopK++) {
-                    candidates.add(new Cell(mem[row - 1][col][prevTopK].dist + INSERTION_COST, -1, 0, prevTopK));
+                    candidates[candidatesCount] = new Cell(mem[row - 1][col][prevTopK].dist + INSERTION_COST, -1, 0, prevTopK);
+                    candidatesCount++;
                 }
 
                 for (int prevTopK = 0; prevTopK < mem[row][col - 1].length; prevTopK++) {
-                    candidates.add(new Cell(mem[row][col - 1][prevTopK].dist + DELETION_COST, 0, -1, prevTopK));
+                    candidates[candidatesCount] = new Cell(mem[row][col - 1][prevTopK].dist + DELETION_COST, 0, -1, prevTopK);
+                    candidatesCount++;
                 }
 
                 for (int prevTopK = 0; prevTopK < mem[row - 1][col - 1].length; prevTopK++) {
-                    candidates.add(new Cell(mem[row - 1][col - 1][prevTopK].dist + subCost, -1, -1, prevTopK));
+                    candidates[candidatesCount] = new Cell(mem[row - 1][col - 1][prevTopK].dist + subCost, -1, -1, prevTopK);
+                    candidatesCount++;
                 }
 
-                // TODO: use either a min-heap, or the Quickselect algorithm
-                candidates.sort(Comparator.comparing(c -> c.dist));
-                if (candidates.size() > topK) {
-                    candidates = candidates.subList(0, topK);
+                if (candidatesCount > topK) {
+                    quickselect(candidates, candidatesCount, topK);
+                    mem[row][col] = new Cell[topK];
+                    System.arraycopy(candidates, 0, mem[row][col], 0, topK);
+                } else {
+                    mem[row][col] = new Cell[candidatesCount];
+                    System.arraycopy(candidates, 0, mem[row][col], 0, candidatesCount);
                 }
-                mem[row][col] = candidates.toArray(new Cell[0]);
             }
         }
 
+        Arrays.sort(mem[s1.length()][s2.length()], Comparator.comparing(c -> c.dist));
         return mem;
     }
 
@@ -211,6 +226,58 @@ public class LevenshteinTopK {
                 alignedS2.reverse().toString(),
                 commonStr.reverse().toString(),
                 gap);
+    }
+
+    static Cell quickselect(Cell[] arr, int length, int k) {
+        shuffle(arr, length);
+        return select(arr, 0, length - 1, k - 1);
+    }
+
+    static Cell select(Cell[] arr, int left, int right, int k) {
+        int p = partition(arr, left, right);
+        if (k == p) {
+            return arr[p];
+        } else if (k < p) {
+            return select(arr, left, p - 1, k);
+        } else {
+            return select(arr, p + 1, right, k);
+        }
+    }
+
+    // 3-way partition
+    static int partition(Cell[] arr, int left, int right) {
+        int pivot = arr[left].dist;
+        int less = left;
+        int greater = right;
+        int i = left + 1;
+        while (i <= greater) {
+            if (arr[i].dist < pivot) {
+                swap(arr, i, less);
+                i++;
+                less++;
+            } else if (arr[i].dist > pivot) {
+                swap(arr, i, greater);
+                greater--;
+            } else {
+                i++;
+            }
+        }
+        return (less + greater) / 2;
+    }
+
+    static void swap(Cell[] arr, int i, int j) {
+        Cell tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+
+    private static final Random RANDOM = new Random(1);
+
+    static void shuffle(Cell[] arr, int length) {
+        for (int i = 0; i < length; i++) {
+            int x = RANDOM.nextInt(i + 1);
+            swap(arr, i, x);
+        }
     }
 
     /**

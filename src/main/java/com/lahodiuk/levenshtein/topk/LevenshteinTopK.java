@@ -30,25 +30,23 @@ import java.util.Random;
  * aligned strings (which correspond to the edit operations).
  * Then:
  *
- * 1)
- *  The alignment with the shortest edit distance (2) will be:
+ * 1) The alignment with the shortest edit distance (2) will be:
  * s1 aligned: ABCD
  * s2 aligned: AXYD
  * common str: A__D
  *  In order to transform the string s1 to s2 it is needed to do the following
- * edit operations with the string s1:
+ *  edit operations with the string s1:
  *       Keep: 'A'
  * Substitute: 'B' -> 'X'
  * Substitute: 'C' -> 'Y'
  *       Keep: 'D'
  *
- * 2)
- *  The other possible alignment with the next shortest edit distance (3) will be:
+ * 2) The other possible alignment with the next shortest edit distance (3) will be:
  * s1 aligned: AB_CD
  * s2 aligned: AXY_D
  * common str: A___D
  *  In order to transform the string s1 to s2 it is needed to do the following
- * edit operations with the string s1:
+ *  edit operations with the string s1:
  *       Keep: 'A'
  * Substitute: 'B' -> 'X'
  *     Insert: 'Y'
@@ -57,8 +55,12 @@ import java.util.Random;
  *
  * And so forth.
  *
- * This implementation makes use of the Quickselect algorithm.
- * Thus, the expected runtime complexity is: O(M*N*K + K*log(K))
+ * This implementation makes use of the Quickselect algorithm (Hoare's selection algorithm).
+ * Thus, the expected runtime complexity is: O(M*N*K + K*log(K)),
+ * where:
+ * - M is the length of the input string s1
+ * - N is the length of the input string s2
+ * - K amount of alignments with the shortest edit distances (top-K)
  */
 public class LevenshteinTopK {
 
@@ -89,6 +91,7 @@ public class LevenshteinTopK {
 
         List<Alignment> result = new ArrayList<>();
         for (Cell last : mem[s1.length()][s2.length()]) {
+
             Alignment alignment = traceBack(s1, s2, mem, last, gap);
             result.add(alignment);
         }
@@ -96,11 +99,11 @@ public class LevenshteinTopK {
     }
 
     /**
-     * Complexity: O(M*N*K*log(N*K)) - if arraylist + sorting will be used
-     *
-     * Complexity: O(M*N*K*log(K)) - if binary heap will be used
-     *
-     * Complexity: O(M*N*K + K*log(K)) - if Quickselect algorithm will be used
+     * The expected runtime complexity is: O(M*N*K + K*log(K)),
+     * where:
+     * - M is the length of the input string s1
+     * - N is the length of the input string s2
+     * - K amount of alignments with the shortest edit distances (top-K)
      */
     private static Cell[][][] calculateMemoizationTable(
             String s1,
@@ -121,7 +124,6 @@ public class LevenshteinTopK {
         }
 
         // Supplementary array
-        // TODO: use either a min-heap, or the Quickselect algorithm
         Cell[] candidates = new Cell[3 * topK];
         int candidatesCount = 0;
 
@@ -137,17 +139,20 @@ public class LevenshteinTopK {
                 candidatesCount = 0;
 
                 for (int prevTopK = 0; prevTopK < mem[row - 1][col].length; prevTopK++) {
-                    candidates[candidatesCount] = new Cell(mem[row - 1][col][prevTopK].dist + INSERTION_COST, -1, 0, prevTopK);
+                    int newDist = mem[row - 1][col][prevTopK].dist + INSERTION_COST;
+                    candidates[candidatesCount] = new Cell(newDist, -1, 0, prevTopK);
                     candidatesCount++;
                 }
 
                 for (int prevTopK = 0; prevTopK < mem[row][col - 1].length; prevTopK++) {
-                    candidates[candidatesCount] = new Cell(mem[row][col - 1][prevTopK].dist + DELETION_COST, 0, -1, prevTopK);
+                    int newDist = mem[row][col - 1][prevTopK].dist + DELETION_COST;
+                    candidates[candidatesCount] = new Cell(newDist, 0, -1, prevTopK);
                     candidatesCount++;
                 }
 
                 for (int prevTopK = 0; prevTopK < mem[row - 1][col - 1].length; prevTopK++) {
-                    candidates[candidatesCount] = new Cell(mem[row - 1][col - 1][prevTopK].dist + subCost, -1, -1, prevTopK);
+                    int newDist = mem[row - 1][col - 1][prevTopK].dist + subCost;
+                    candidates[candidatesCount] = new Cell(newDist, -1, -1, prevTopK);
                     candidatesCount++;
                 }
 
@@ -166,6 +171,13 @@ public class LevenshteinTopK {
         return mem;
     }
 
+    /**
+     * Reconstruction of the strings alignments from the memoization table.
+     * The runtime complexity is O(M + N),
+     * where:
+     * - M is the length of the input string s1
+     * - N is the length of the input string s2
+     */
     private static Alignment traceBack(
             String s1,
             String s2,
@@ -228,24 +240,39 @@ public class LevenshteinTopK {
                 gap);
     }
 
-    static Cell quickselect(Cell[] arr, int length, int k) {
+    /**
+     * Wrapper around the Hoare's selection algorithm,
+     * which moves the top-k smallest items of the array to the left hand side.
+     * The expected runtime complexity is linear.
+     */
+    private static Cell quickselect(Cell[] arr, int length, int k) {
+        // According to the recommendation of Robert Sedgewick
+        // it worth to shuffle the array in order to guarantee
+        // the expected linear runtime complexity.
         shuffle(arr, length);
-        return select(arr, 0, length - 1, k - 1);
+        return quickselect(arr, 0, length - 1, k - 1);
     }
 
-    static Cell select(Cell[] arr, int left, int right, int k) {
+    /**
+     * Hoare's selection algorithm.
+     * Moves the top-k smallest items of the array to the left hand side.
+     * See: https://en.wikipedia.org/wiki/Quickselect
+     */
+    private static Cell quickselect(Cell[] arr, int left, int right, int k) {
         int p = partition(arr, left, right);
         if (k == p) {
             return arr[p];
         } else if (k < p) {
-            return select(arr, left, p - 1, k);
+            return quickselect(arr, left, p - 1, k);
         } else {
-            return select(arr, p + 1, right, k);
+            return quickselect(arr, p + 1, right, k);
         }
     }
 
-    // 3-way partition
-    static int partition(Cell[] arr, int left, int right) {
+    /**
+     * 3-way partition, used by the Hoare's selection algorithm.
+     */
+    private static int partition(Cell[] arr, int left, int right) {
         int pivot = arr[left].dist;
         int less = left;
         int greater = right;
@@ -265,7 +292,10 @@ public class LevenshteinTopK {
         return (less + greater) / 2;
     }
 
-    static void swap(Cell[] arr, int i, int j) {
+    /**
+     * Used by the Hoare's selection algorithm.
+     */
+    private static void swap(Cell[] arr, int i, int j) {
         Cell tmp = arr[i];
         arr[i] = arr[j];
         arr[j] = tmp;
@@ -273,6 +303,9 @@ public class LevenshteinTopK {
 
     private static final Random RANDOM = new Random(1);
 
+    /**
+     * Used by the Hoare's selection algorithm.
+     */
     static void shuffle(Cell[] arr, int length) {
         for (int i = 0; i < length; i++) {
             int x = RANDOM.nextInt(i + 1);

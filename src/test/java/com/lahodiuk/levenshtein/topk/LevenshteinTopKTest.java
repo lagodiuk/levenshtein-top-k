@@ -68,7 +68,7 @@ import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
  * algorithm.
  *
  * 9) Given the input strings s1 and s2, it follows that the length of the
- * corresponding aligned strings (an the longest common aligned substring) must
+ * corresponding aligned strings (and the longest common aligned substring) must
  * be less or equal than (length(s1) + length(s2)).
  */
 @RunWith(JUnitQuickcheck.class)

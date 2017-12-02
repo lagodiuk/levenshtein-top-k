@@ -30,11 +30,52 @@ import com.pholser.junit.quickcheck.generator.Generator;
 import com.pholser.junit.quickcheck.random.SourceOfRandomness;
 import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
 
+/**
+ * The following properties are tested:
+ *
+ * 1) The edit distance between two strings always exists. Thus, the results of
+ * the LevenshteinTopK algorithm are never empty.
+ *
+ * 2) The results of the LevenshteinTopK algorithm contain alignments of the
+ * strings. The alignments represent the the original input strings with
+ * additional "gap" characters inside (these gap characters reflect the edit
+ * operations on the strings). The aligned strings must always have the same
+ * length.
+ *
+ * 3) The results of the LevenshteinTopK algorithm represent the top-K different
+ * alignments with the smallest edit distances (in the order of increase of the
+ * edit distance). Thus, the edit distances of results must always be in
+ * non-decreasing order.
+ *
+ * 4) The calculated values of the edit distances must comply to the amount of
+ * edit operations, derived from the aligned strings.
+ *
+ * 5) Removal of the gap characters from the aligned strings results in the
+ * original input strings.
+ *
+ * 6) The non-gap characters in the longest common substring are exactly the
+ * same as the characters in the corresponding positions inside the both of
+ * aligned strings.
+ *
+ * 7) Results must be stable. Given the strings s1 and s2, and the top-K and and
+ * top-N results of the LevenshteinTopK algorithm on these strings (the results
+ * are the lists of alignments with the smallest edit distances). Let M = min(K,
+ * N), then the list of top-M results of the LevenshteinTopK algorithm will be
+ * present at the head (prefix) of both other lists: top-K and top-N.
+ *
+ * 8) The edit distance of the first results of the LevenshteinTopK algorithm
+ * must be equal to the edit distance, calculated by the Wagner–Fischer
+ * algorithm.
+ */
 @RunWith(JUnitQuickcheck.class)
 public class LevenshteinTopKTest {
 
     private final LevenshteinTopKCalculator alg = LevenshteinTopK::getAlignments;
 
+    /**
+     * 1) The edit distance between two strings always exists. Thus, the results
+     * of the LevenshteinTopK algorithm are never empty.
+     */
     @Property
     public void resultAlwaysNonEmpty(
             @From(InputDataGenerator.class) InputData input) {
@@ -45,6 +86,13 @@ public class LevenshteinTopKTest {
         assertTrue(results.size() > 0);
     }
 
+    /**
+     * 2) The results of the LevenshteinTopK algorithm contain alignments of the
+     * strings. The alignments represent the the original input strings with
+     * additional "gap" characters inside (these gap characters reflect the edit
+     * operations on the strings). The aligned strings must always have the same
+     * length.
+     */
     @Property
     public void alignedStringsHaveTheSameLenth(
             @From(InputDataGenerator.class) InputData input) {
@@ -63,6 +111,12 @@ public class LevenshteinTopKTest {
         }
     }
 
+    /**
+     * 3) The results of the LevenshteinTopK algorithm represent the top-K
+     * different alignments with the smallest edit distances (in the order of
+     * increase of the edit distance). Thus, the edit distances of results must
+     * always be in non-decreasing order.
+     */
     @Property
     public void editDistancesAreIncreasing(
             @From(InputDataGenerator.class) InputData input) {
@@ -79,6 +133,10 @@ public class LevenshteinTopKTest {
         }
     }
 
+    /**
+     * 4) The calculated values of the edit distances must comply to the amount
+     * of edit operations, derived from the aligned strings.
+     */
     @Property
     public void editDistancesMustBeCorrect(
             @From(InputDataGenerator.class) InputData input) {
@@ -94,6 +152,10 @@ public class LevenshteinTopKTest {
         }
     }
 
+    /**
+     * 5) Removal of the gap characters from the aligned strings results in the
+     * original input strings.
+     */
     @Property
     public void removalOfTheGapCharactersFromAlignedStringsEqualToInput(
             @From(InputDataGenerator.class) InputData input) {
@@ -114,6 +176,11 @@ public class LevenshteinTopKTest {
         }
     }
 
+    /**
+     * 6) The non-gap characters in the longest common substring are exactly the
+     * same as the characters in the corresponding positions inside the both of
+     * aligned strings.
+     */
     @Property
     public void commonStrIsCorrect(
             @From(InputDataGenerator.class) InputData input) {
@@ -137,6 +204,14 @@ public class LevenshteinTopKTest {
         }
     }
 
+    /**
+     * 7) Results must be stable. Given the strings s1 and s2, and the top-K and
+     * and top-N results of the LevenshteinTopK algorithm on these strings (the
+     * results are the lists of alignments with the smallest edit distances).
+     * Let M = min(K, N), then the list of top-M results of the LevenshteinTopK
+     * algorithm will be present at the head (prefix) of both other lists: top-K
+     * and top-N.
+     */
     @Property(trials = 200)
     public void stabilityOfResults(
             @From(InputDataGenerator.class) InputData input) {
@@ -167,14 +242,40 @@ public class LevenshteinTopKTest {
         }
     }
 
-    public void assertEquality(Alignment alignmentTopM, Alignment alignmentTopN) {
-        assertEquals(alignmentTopM.editDist, alignmentTopN.editDist);
-        assertEquals(alignmentTopM.alignedStr1, alignmentTopN.alignedStr1);
-        assertEquals(alignmentTopM.alignedStr2, alignmentTopN.alignedStr2);
-        assertEquals(alignmentTopM.commonStr, alignmentTopN.commonStr);
-        assertEquals(alignmentTopM.gapChar, alignmentTopN.gapChar);
+    /**
+     * 8) The edit distance of the first results of the LevenshteinTopK
+     * algorithm must be equal to the edit distance, calculated by the
+     * Wagner–Fischer algorithm.
+     */
+    @Property(trials = 200)
+    public void firstResultHasShortestEditDistance(
+            @From(InputDataGenerator.class) InputData input) {
+
+        List<Alignment> resultsTopK = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        Alignment firstResult = resultsTopK.get(0);
+
+        int shortestEditDist = this.shortestEditDistance(
+                input.s1.toCharArray(), input.s2.toCharArray());
+
+        assertEquals(shortestEditDist, firstResult.editDist);
     }
 
+    /**
+     * Checking the equality of two different alignments.
+     */
+    public void assertEquality(Alignment a1, Alignment a2) {
+        assertEquals(a1.editDist, a2.editDist);
+        assertEquals(a1.alignedStr1, a2.alignedStr1);
+        assertEquals(a1.alignedStr2, a2.alignedStr2);
+        assertEquals(a1.commonStr, a2.commonStr);
+        assertEquals(a1.gapChar, a2.gapChar);
+    }
+
+    /**
+     * Remove the "gap" character from the string.
+     */
     private String deleteGapCharacter(String s, char gapChar) {
         return s.replace("" + gapChar, "");
     }
@@ -203,6 +304,43 @@ public class LevenshteinTopKTest {
         return expectedEditDistance;
     }
 
+    /**
+     * Memory optimized version of the Wagner–Fischer algorithm.
+     */
+    private int shortestEditDistance(char[] s1, char[] s2) {
+
+        // memoize only previous line of distance matrix
+        int[] prev = new int[s2.length + 1];
+
+        for (int j = 0; j < s2.length + 1; j++) {
+            prev[j] = j;
+        }
+
+        for (int i = 1; i < s1.length + 1; i++) {
+
+            // calculate current line of distance matrix
+            int[] curr = new int[s2.length + 1];
+            curr[0] = i;
+
+            for (int j = 1; j < s2.length + 1; j++) {
+                int d1 = prev[j] + LevenshteinTopK.DELETION_COST;
+                int d2 = curr[j - 1] + LevenshteinTopK.INSERTION_COST;
+                int d3 = prev[j - 1];
+                if (s1[i - 1] != s2[j - 1]) {
+                    d3 += LevenshteinTopK.SUBSTITUTION_COST;
+                }
+                curr[j] = Math.min(Math.min(d1, d2), d3);
+            }
+
+            // define current line of distance matrix as previous
+            prev = curr;
+        }
+        return prev[s2.length];
+    }
+
+    /**
+     * Input data for the LevenshteinTopK algorithm.
+     */
     public static class InputData {
         public final String s1;
         public final String s2;
@@ -219,6 +357,10 @@ public class LevenshteinTopKTest {
         }
     }
 
+    /**
+     * Generates the random instances of the input data for the LevenshteinTopK
+     * algorithm.
+     */
     public static class InputDataGenerator extends Generator<InputData> {
 
         public static final int MAX_STRING_LENGTH = 50;
@@ -263,5 +405,19 @@ public class LevenshteinTopKTest {
             }
             return sb.toString().replace(gapChar, (char) (gapChar + 1));
         }
+    }
+
+    /**
+     * Functional interface, which allows to abstract the signature of the
+     * LevenshteinTopK algorithm.
+     */
+    @FunctionalInterface
+    public interface LevenshteinTopKCalculator {
+
+        List<Alignment> getAlignments(
+                String s1,
+                String s2,
+                int topK,
+                char gap);
     }
 }

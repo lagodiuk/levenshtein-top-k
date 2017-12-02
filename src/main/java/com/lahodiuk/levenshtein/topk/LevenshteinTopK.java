@@ -19,6 +19,51 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * The algorithm, which returns top-K different string alignments with the
+ * shortest edit distances (based on the Levenshtein distance definition). <br>
+ *
+ * <br>
+ * For example, given the input strings "ABCD" and "AXYD". <br>
+ * Let the character '_' be the "gap" character for marking the gaps in the
+ * aligned strings (which correspond to the edit operations). <br>
+ *
+ * Then: <br>
+ *
+ * <br>
+ * 1) <br>
+ * The alignment with the shortest edit distance (2) will be: <br>
+ *
+ * s1 aligned: ABCD <br>
+ * s2 aligned: AXYD <br>
+ * common str: A__D <br>
+ * <br>
+ * In order to transform the string s1 to s2 it is needed to do the following
+ * edit operations with the string s1: <br>
+ *       Keep: 'A'        <br>
+ * Substitute: 'B' -> 'X' <br>
+ * Substitute: 'C' -> 'Y' <br>
+ *       Keep: 'D'        <br>
+ *
+ * <br>
+ * 2) <br>
+ * The other possible alignment with the next shortest edit distance (3) will be: <br>
+ *
+ * s1 aligned: AB_CD <br>
+ * s2 aligned: AXY_D <br>
+ * common str: A___D <br>
+ * <br>
+ * In order to transform the string s1 to s2 it is needed to do the following
+ * edit operations with the string s1: <br>
+ *       Keep: 'A'        <br>
+ * Substitute: 'B' -> 'X' <br>
+ *     Insert: 'Y'        <br>
+ *     Delete: 'C'        <br>
+ *       Keep: 'D'        <br>
+ *
+ * <br>
+ * And so forth.
+ */
 public class LevenshteinTopK {
 
     public static final int INSERTION_COST = 1;
@@ -34,6 +79,10 @@ public class LevenshteinTopK {
         return getAlignments(s1, s2, topK, DEFAULT_GAP_CHAR);
     }
 
+    /**
+     * Returns top-K different string alignments with the shortest edit
+     * distances (based on the Levenshtein distance definition).
+     */
     public static List<Alignment> getAlignments(
             String s1,
             String s2,
@@ -173,7 +222,12 @@ public class LevenshteinTopK {
                 gap);
     }
 
+    /**
+     * The cell of the memoization table, which handles the edit distance and
+     * back references to the preceding cells of the memoization table.
+     */
     private static class Cell {
+
         public final int dist;
         public final int prevTopK;
         // TODO: deltRow and deltCol can be stored inside one int field
@@ -197,6 +251,11 @@ public class LevenshteinTopK {
         }
     }
 
+    /**
+     * The wrapper around the two mutually aligned strings, which contains the
+     * amount of the edit operations, and the alignment with the corresponding
+     * common substrings.
+     */
     public static class Alignment {
 
         public final int editDist;

@@ -24,7 +24,7 @@ public class Demo {
     public static void main(String[] args) {
         // printAlignment("frankfurt", "frnkfurt", 100);
         // printAlignment("abc", "abc", 100);
-        printAlignment("abcd", "axyd", 10);
+        printAlignment("ABCD", "AXYD", 10);
         // printAlignment("101011001101", "1101010111010", 100);
     }
 

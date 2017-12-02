@@ -36,6 +36,16 @@ public class LevenshteinTopKTest {
     private final LevenshteinTopKCalculator alg = LevenshteinTopK::getAlignments;
 
     @Property
+    public void resultAlwaysNonEmpty(
+            @From(InputDataGenerator.class) InputData input) {
+
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        assertTrue(results.size() > 0);
+    }
+
+    @Property
     public void alignedStringsHaveTheSameLenth(
             @From(InputDataGenerator.class) InputData input) {
 
@@ -84,7 +94,95 @@ public class LevenshteinTopKTest {
         }
     }
 
-    public int calculateExpectedEditDistance(Alignment alignment) {
+    @Property
+    public void removalOfTheGapCharactersFromAlignedStringsEqualToInput(
+            @From(InputDataGenerator.class) InputData input) {
+
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        for (Alignment alignment : results) {
+
+            String alignedStr1WithoutGaps =
+                    this.deleteGapCharacter(alignment.alignedStr1, alignment.gapChar);
+
+            String alignedStr2WithoutGaps =
+                    this.deleteGapCharacter(alignment.alignedStr2, alignment.gapChar);
+
+            assertEquals(input.s1, alignedStr1WithoutGaps);
+            assertEquals(input.s2, alignedStr2WithoutGaps);
+        }
+    }
+
+    @Property
+    public void commonStrIsCorrect(
+            @From(InputDataGenerator.class) InputData input) {
+
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        for (Alignment alignment : results) {
+
+            for (int i = 0; i < alignment.commonStr.length(); i++) {
+                char commonStrChar = alignment.commonStr.charAt(i);
+
+                if (commonStrChar != alignment.gapChar) {
+                    char alignedStr1Char = alignment.alignedStr1.charAt(i);
+                    char alignedStr2Char = alignment.alignedStr2.charAt(i);
+
+                    assertEquals(commonStrChar, alignedStr1Char);
+                    assertEquals(commonStrChar, alignedStr2Char);
+                }
+            }
+        }
+    }
+
+    @Property(trials = 200)
+    public void stabilityOfResults(
+            @From(InputDataGenerator.class) InputData input) {
+
+        int topM = Math.min(input.topK, input.topN);
+
+        List<Alignment> resultsTopM = this.alg.getAlignments(
+                input.s1, input.s2, topM, input.gapChar);
+
+        List<Alignment> resultsTopK = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        List<Alignment> resultsTopN = this.alg.getAlignments(
+                input.s1, input.s2, input.topN, input.gapChar);
+
+        for (int i = 0; i < resultsTopM.size(); i++) {
+            Alignment alignmentTopM = resultsTopM.get(i);
+            Alignment alignmentTopN = resultsTopN.get(i);
+
+            this.assertEquality(alignmentTopM, alignmentTopN);
+        }
+
+        for (int i = 0; i < resultsTopM.size(); i++) {
+            Alignment alignmentTopM = resultsTopM.get(i);
+            Alignment alignmentTopK = resultsTopK.get(i);
+
+            this.assertEquality(alignmentTopM, alignmentTopK);
+        }
+    }
+
+    public void assertEquality(Alignment alignmentTopM, Alignment alignmentTopN) {
+        assertEquals(alignmentTopM.editDist, alignmentTopN.editDist);
+        assertEquals(alignmentTopM.alignedStr1, alignmentTopN.alignedStr1);
+        assertEquals(alignmentTopM.alignedStr2, alignmentTopN.alignedStr2);
+        assertEquals(alignmentTopM.commonStr, alignmentTopN.commonStr);
+        assertEquals(alignmentTopM.gapChar, alignmentTopN.gapChar);
+    }
+
+    private String deleteGapCharacter(String s, char gapChar) {
+        return s.replace("" + gapChar, "");
+    }
+
+    /**
+     * Calculate the edit distance based on the aligned strings.
+     */
+    private int calculateExpectedEditDistance(Alignment alignment) {
 
         int expectedEditDistance = 0;
         for (int i = 0; i < alignment.commonStr.length(); i++) {
@@ -110,18 +208,20 @@ public class LevenshteinTopKTest {
         public final String s2;
         public final char gapChar;
         public final int topK;
+        public final int topN;
 
-        public InputData(String s1, String s2, char gapChar, int topK) {
+        public InputData(String s1, String s2, char gapChar, int topK, int topN) {
             this.s1 = s1;
             this.s2 = s2;
             this.gapChar = gapChar;
             this.topK = topK;
+            this.topN = topN;
         }
     }
 
     public static class InputDataGenerator extends Generator<InputData> {
 
-        public static final int MAX_STRING_LENGTH = 20;
+        public static final int MAX_STRING_LENGTH = 50;
         public static final int MAX_TOP_K = 100;
 
         public InputDataGenerator(Class<InputData> type) {
@@ -133,15 +233,25 @@ public class LevenshteinTopKTest {
                 SourceOfRandomness rnd,
                 GenerationStatus status) {
 
-            char gapChar = rnd.nextChar((char) 0, (char) 255);
-            String s1 = this.generateRandomString(rnd, status, gapChar);
-            String s2 = this.generateRandomString(rnd, status, gapChar);
+            char gapChar = rnd.nextChar((char) 0, (char) 254);
+            String s1 = this.generateRandomSimpleString(rnd, status, gapChar);
+            String s2 = this.generateRandomSimpleString(rnd, status, gapChar);
             int topK = rnd.nextInt(1, MAX_TOP_K);
+            int topN = rnd.nextInt(1, MAX_TOP_K);
 
-            return new InputData(s1, s2, gapChar, topK);
+            return new InputData(s1, s2, gapChar, topK, topN);
         }
 
-        public String generateRandomString(
+        /**
+         * Usually, generated strings consists of the characters: 'a' to 'z'. <br>
+         *
+         * The gapChar characters in the generated string will be replaced to
+         * the (char) (gapChar + 1). <br>
+         *
+         * Thus, in case if gapChar is 'z', then the generated string might
+         * contain the character (char) ('z' + 1).
+         */
+        public String generateRandomSimpleString(
                 SourceOfRandomness rnd,
                 GenerationStatus status,
                 char gapChar) {
@@ -151,7 +261,7 @@ public class LevenshteinTopKTest {
             for (int i = 0; i < length; i++) {
                 sb.append(rnd.nextChar('a', 'z'));
             }
-            return sb.toString().replace(gapChar, '?');
+            return sb.toString().replace(gapChar, (char) (gapChar + 1));
         }
     }
 }

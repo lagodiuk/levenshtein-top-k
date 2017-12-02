@@ -21,47 +21,38 @@ import java.util.List;
 
 /**
  * The algorithm, which returns top-K different string alignments with the
- * shortest edit distances (based on the Levenshtein distance definition). <br>
+ * shortest edit distances (based on the Levenshtein distance definition).
  *
- * <br>
- * For example, given the input strings "ABCD" and "AXYD". <br>
+ * For example, given the input strings "ABCD" and "AXYD".
  * Let the character '_' be the "gap" character for marking the gaps in the
- * aligned strings (which correspond to the edit operations). <br>
+ * aligned strings (which correspond to the edit operations).
+ * Then:
  *
- * Then: <br>
+ * 1)
+ *  The alignment with the shortest edit distance (2) will be:
+ * s1 aligned: ABCD
+ * s2 aligned: AXYD
+ * common str: A__D
+ *  In order to transform the string s1 to s2 it is needed to do the following
+ * edit operations with the string s1:
+ *       Keep: 'A'
+ * Substitute: 'B' -> 'X'
+ * Substitute: 'C' -> 'Y'
+ *       Keep: 'D'
  *
- * <br>
- * 1) <br>
- * The alignment with the shortest edit distance (2) will be: <br>
+ * 2)
+ *  The other possible alignment with the next shortest edit distance (3) will be:
+ * s1 aligned: AB_CD
+ * s2 aligned: AXY_D
+ * common str: A___D
+ *  In order to transform the string s1 to s2 it is needed to do the following
+ * edit operations with the string s1:
+ *       Keep: 'A'
+ * Substitute: 'B' -> 'X'
+ *     Insert: 'Y'
+ *     Delete: 'C'
+ *       Keep: 'D'
  *
- * s1 aligned: ABCD <br>
- * s2 aligned: AXYD <br>
- * common str: A__D <br>
- * <br>
- * In order to transform the string s1 to s2 it is needed to do the following
- * edit operations with the string s1: <br>
- *       Keep: 'A'        <br>
- * Substitute: 'B' -> 'X' <br>
- * Substitute: 'C' -> 'Y' <br>
- *       Keep: 'D'        <br>
- *
- * <br>
- * 2) <br>
- * The other possible alignment with the next shortest edit distance (3) will be: <br>
- *
- * s1 aligned: AB_CD <br>
- * s2 aligned: AXY_D <br>
- * common str: A___D <br>
- * <br>
- * In order to transform the string s1 to s2 it is needed to do the following
- * edit operations with the string s1: <br>
- *       Keep: 'A'        <br>
- * Substitute: 'B' -> 'X' <br>
- *     Insert: 'Y'        <br>
- *     Delete: 'C'        <br>
- *       Keep: 'D'        <br>
- *
- * <br>
  * And so forth.
  */
 public class LevenshteinTopK {

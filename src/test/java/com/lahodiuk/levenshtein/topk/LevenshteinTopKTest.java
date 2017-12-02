@@ -66,6 +66,10 @@ import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
  * 8) The edit distance of the first results of the LevenshteinTopK algorithm
  * must be equal to the edit distance, calculated by the Wagner–Fischer
  * algorithm.
+ *
+ * 9) Given the input strings s1 and s2, it follows that the length of the
+ * corresponding aligned strings (an the longest common aligned substring) must
+ * be less or equal than (length(s1) + length(s2)).
  */
 @RunWith(JUnitQuickcheck.class)
 public class LevenshteinTopKTest {
@@ -243,23 +247,44 @@ public class LevenshteinTopKTest {
     }
 
     /**
-     * 8) The edit distance of the first results of the LevenshteinTopK
-     * algorithm must be equal to the edit distance, calculated by the
-     * Wagner–Fischer algorithm.
+     * 8) The edit distance of the first result of the LevenshteinTopK algorithm
+     * must be equal to the edit distance, calculated by the Wagner–Fischer
+     * algorithm.
      */
     @Property(trials = 200)
     public void firstResultHasShortestEditDistance(
             @From(InputDataGenerator.class) InputData input) {
 
-        List<Alignment> resultsTopK = this.alg.getAlignments(
+        List<Alignment> results = this.alg.getAlignments(
                 input.s1, input.s2, input.topK, input.gapChar);
 
-        Alignment firstResult = resultsTopK.get(0);
+        Alignment firstResult = results.get(0);
 
         int shortestEditDist = this.shortestEditDistance(
                 input.s1.toCharArray(), input.s2.toCharArray());
 
         assertEquals(shortestEditDist, firstResult.editDist);
+    }
+
+    /**
+     * 9) Given the input strings s1 and s2, it follows that the length of the
+     * corresponding aligned strings (an the longest common aligned substring)
+     * must be less or equal than (length(s1) + length(s2)).
+     */
+    @Property(trials = 200)
+    public void maxLengthOfTheAlignedString(
+            @From(InputDataGenerator.class) InputData input) {
+
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        int maxLength = input.s1.length() + input.s2.length();
+
+        for (Alignment alignment : results) {
+            assertTrue(alignment.alignedStr1.length() <= maxLength);
+            assertTrue(alignment.alignedStr2.length() <= maxLength);
+            assertTrue(alignment.commonStr.length() <= maxLength);
+        }
     }
 
     /**

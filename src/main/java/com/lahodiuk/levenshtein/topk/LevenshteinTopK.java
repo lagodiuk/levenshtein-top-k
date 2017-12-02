@@ -21,35 +21,12 @@ import java.util.List;
 
 public class LevenshteinTopK {
 
-    public static void main(String[] args) {
-        // printAlignment("frankfurt", "frnkfurt", 100);
-        // printAlignment("abc", "abc", 100);
-        printAlignment("abcd", "axyd", 10);
-        // printAlignment("101011001101", "1101010111010", 100);
-    }
-
-    static void printAlignment(String s1, String s2, int topK) {
-        List<Alignment> result = getAlignments(s1, s2, topK);
-        System.out.println("Total amount of results: " + result.size());
-        System.out.println();
-        for (Alignment alignment : result) {
-            System.out.println("=======================================");
-            System.out.println();
-            System.out.println("Edit distance:" + alignment.editDist);
-            System.out.println("s1 aligned: " + alignment.alignedStr1);
-            System.out.println("s2 aligned: " + alignment.alignedStr2);
-            System.out.println("common str: " + alignment.commonStr);
-            alignment.printExplanation();
-            System.out.println();
-        }
-    }
-
     public static final int INSERTION_COST = 1;
     public static final int DELETION_COST = 1;
     public static final int SUBSTITUTION_COST = 1;
     public static final char DEFAULT_GAP_CHAR = '_';
 
-    static List<Alignment> getAlignments(
+    public static List<Alignment> getAlignments(
             String s1,
             String s2,
             int topK) {
@@ -57,7 +34,7 @@ public class LevenshteinTopK {
         return getAlignments(s1, s2, topK, DEFAULT_GAP_CHAR);
     }
 
-    static List<Alignment> getAlignments(
+    public static List<Alignment> getAlignments(
             String s1,
             String s2,
             int topK,
@@ -80,7 +57,7 @@ public class LevenshteinTopK {
      *
      * Complexity: O(M*N*K) - if Quickselect algorithm will be used
      */
-    public static Cell[][][] calculateMemoizationTable(
+    private static Cell[][][] calculateMemoizationTable(
             String s1,
             String s2,
             int topK) {
@@ -198,10 +175,10 @@ public class LevenshteinTopK {
 
     private static class Cell {
         public final int dist;
+        public final int prevTopK;
         // TODO: deltRow and deltCol can be stored inside one int field
         public final int deltRow;
         public final int deltCol;
-        public final int prevTopK;
 
         public Cell(int dist) {
             this(dist, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
@@ -221,6 +198,7 @@ public class LevenshteinTopK {
     }
 
     public static class Alignment {
+
         public final int editDist;
         public final String alignedStr1;
         public final String alignedStr2;
@@ -239,27 +217,6 @@ public class LevenshteinTopK {
             this.alignedStr2 = alignedStr2;
             this.commonStr = commonStr;
             this.gapChar = gapChar;
-        }
-
-        public void printExplanation() {
-
-            System.out.println();
-            System.out.println("Transformation of the string s1 to s2:");
-
-            for (int i = 0; i < this.alignedStr1.length(); i++) {
-                char nextCharS1 = this.alignedStr1.charAt(i);
-                char nextCharS2 = this.alignedStr2.charAt(i);
-
-                if (nextCharS1 == this.gapChar) {
-                    System.out.printf("%10s: '%c' %n", "Insert", nextCharS2);
-                } else if (nextCharS2 == this.gapChar) {
-                    System.out.printf("%10s: '%c' %n", "Delete", nextCharS1);
-                } else if (this.alignedStr1.charAt(i) != nextCharS2) {
-                    System.out.printf("%10s: '%c' -> '%c' %n", "Substitute", nextCharS1, nextCharS2);
-                } else {
-                    System.out.printf("%10s: '%c' %n", "Keep", nextCharS1);
-                }
-            }
         }
     }
 }

@@ -23,7 +23,8 @@ import java.util.Random;
 
 /**
  * The algorithm, which returns top-K different string alignments with the
- * shortest edit distances (based on the Levenshtein distance definition).
+ * shortest edit distances among other possible alignments
+ * (based on the Levenshtein distance definition).
  *
  * For example, given the input strings s1 = "ABCD" and s2 = "AXYD".
  * Let the character '_' be the "gap" character for marking the gaps in the
@@ -62,7 +63,7 @@ import java.util.Random;
  * - Sorting-based partition of an array
  *
  * In case of the Quickselect-based partition, the expected runtime complexity is: O(M*N*K + K*log(K)).
- * In case of the Sorting-based partition, the expected runtime complexity is: O(M*N*K*log(K) + K*log(K)).
+ * In case of the Sorting-based partition, the expected runtime complexity is: O(M*N*K*log(K)).
  * Where:
  * - M is the length of the input string s1
  * - N is the length of the input string s2

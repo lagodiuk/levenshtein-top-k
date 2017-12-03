@@ -21,17 +21,23 @@ import com.lahodiuk.levenshtein.topk.LevenshteinTopK.Alignment;
 
 public class Demo {
 
+    private static boolean PRINT_EXPLANATION = false;
+
     public static void main(String[] args) {
         // printAlignment("frankfurt", "frnkfurt", 100);
         // printAlignment("abc", "abc", 100);
-        printAlignment("ABCD", "AXYD", 10);
+        // printAlignment("ABCD", "AXYD", 10);
+        printAlignment("TGCA", "TCTA", 10);
         // printAlignment("101011001101", "1101010111010", 100);
+        // printAlignment("TGCATATTACGAGC", "ATCCGATACGAGCG", 10);
     }
 
     static void printAlignment(String s1, String s2, int topK) {
         List<Alignment> result = LevenshteinTopK.getAlignments(s1, s2, topK);
+
         System.out.println("Total amount of results: " + result.size());
         System.out.println();
+
         for (Alignment alignment : result) {
             System.out.println("=======================================");
             System.out.println();
@@ -39,7 +45,10 @@ public class Demo {
             System.out.println("s1 aligned: " + alignment.alignedStr1);
             System.out.println("s2 aligned: " + alignment.alignedStr2);
             System.out.println("common str: " + alignment.commonStr);
-            printExplanation(alignment);
+
+            if (PRINT_EXPLANATION) {
+                printExplanation(alignment);
+            }
             System.out.println();
         }
     }

@@ -326,7 +326,7 @@ public class LevenshteinTopK {
     /**
      * Used by the Hoare's selection algorithm.
      */
-    static void shuffle(Cell[] arr, int length) {
+    private static void shuffle(Cell[] arr, int length) {
         for (int i = 0; i < length; i++) {
             int x = RANDOM.nextInt(i + 1);
             swap(arr, i, x);

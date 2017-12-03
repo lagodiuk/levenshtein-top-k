@@ -25,7 +25,7 @@ import java.util.Random;
  * The algorithm, which returns top-K different string alignments with the
  * shortest edit distances (based on the Levenshtein distance definition).
  *
- * For example, given the input strings "ABCD" and "AXYD".
+ * For example, given the input strings s1 = "ABCD" and s2 = "AXYD".
  * Let the character '_' be the "gap" character for marking the gaps in the
  * aligned strings (which correspond to the edit operations).
  * Then:
@@ -55,9 +55,15 @@ import java.util.Random;
  *
  * And so forth.
  *
- * This implementation makes use of the Quickselect algorithm (Hoare's selection algorithm).
- * Thus, the expected runtime complexity is: O(M*N*K + K*log(K)),
- * where:
+ * One of a supplementary steps of the algorithm is a selection of
+ * the K smallest elements of an array.
+ * The different strategies can be used for this purpose:
+ * - Quickselect-based partition of an array (based on the Hoare's selection algorithm)
+ * - Sorting-based partition of an array
+ *
+ * In case of the Quickselect-based partition, the expected runtime complexity is: O(M*N*K + K*log(K)).
+ * In case of the Sorting-based partition, the expected runtime complexity is: O(M*N*K*log(K) + K*log(K)).
+ * Where:
  * - M is the length of the input string s1
  * - N is the length of the input string s2
  * - K amount of alignments with the shortest edit distances (top-K)
@@ -68,6 +74,12 @@ public class LevenshteinTopK {
     public static final int DELETION_COST = 1;
     public static final int SUBSTITUTION_COST = 1;
     public static final char DEFAULT_GAP_CHAR = '_';
+
+    /**
+     * If true, then the Quickselect-based partition is used,
+     * otherwise the Sorting-based partition is used.
+     */
+    public static boolean QUICKSELECT_BASED_PARTITION = false;
 
     public static List<Alignment> getAlignments(
             String s1,
@@ -137,19 +149,19 @@ public class LevenshteinTopK {
                 int subCost = (s1Char == s2Char) ? 0 : SUBSTITUTION_COST;
 
                 candidatesCount = 0;
-
+                // Iterate over the predecessors (for the case of insertion)
                 for (int prevTopK = 0; prevTopK < mem[row - 1][col].length; prevTopK++) {
                     int newDist = mem[row - 1][col][prevTopK].dist + INSERTION_COST;
                     candidates[candidatesCount] = new Cell(newDist, -1, 0, prevTopK);
                     candidatesCount++;
                 }
-
+                // Iterate over the predecessors (for the case of deletion)
                 for (int prevTopK = 0; prevTopK < mem[row][col - 1].length; prevTopK++) {
                     int newDist = mem[row][col - 1][prevTopK].dist + DELETION_COST;
                     candidates[candidatesCount] = new Cell(newDist, 0, -1, prevTopK);
                     candidatesCount++;
                 }
-
+                // Iterate over the predecessors (for the case of substitution)
                 for (int prevTopK = 0; prevTopK < mem[row - 1][col - 1].length; prevTopK++) {
                     int newDist = mem[row - 1][col - 1][prevTopK].dist + subCost;
                     candidates[candidatesCount] = new Cell(newDist, -1, -1, prevTopK);
@@ -157,10 +169,12 @@ public class LevenshteinTopK {
                 }
 
                 if (candidatesCount > topK) {
-                    quickselect(candidates, candidatesCount, topK);
+                    // Select from all candidates K cells with the smallest edit distances
+                    selection(candidates, candidatesCount, topK);
                     mem[row][col] = new Cell[topK];
                     System.arraycopy(candidates, 0, mem[row][col], 0, topK);
                 } else {
+                    // Amount of candidates is smaller than K
                     mem[row][col] = new Cell[candidatesCount];
                     System.arraycopy(candidates, 0, mem[row][col], 0, candidatesCount);
                 }
@@ -206,12 +220,14 @@ public class LevenshteinTopK {
                 alignedS1.append(s1Char);
                 alignedS2.append(gap);
                 commonStr.append(gap);
+
             } else if (curr.deltRow == 0 && curr.deltCol == -1) {
                 // Deletion
                 char s2Char = s2.charAt(c - 1);
                 alignedS1.append(gap);
                 alignedS2.append(s2Char);
                 commonStr.append(gap);
+
             } else if (curr.deltRow == -1 && curr.deltCol == -1) {
                 // Substitution
                 char s1Char = s1.charAt(r - 1);
@@ -241,16 +257,21 @@ public class LevenshteinTopK {
     }
 
     /**
-     * Wrapper around the Hoare's selection algorithm,
-     * which moves the top-k smallest items of the array to the left hand side.
-     * The expected runtime complexity is linear.
+     * Moves the top-k smallest items of the array to the left hand side.
+     * Uses either the Sorting-based or the Quickselect-based partition.
+     * See: https://en.wikipedia.org/wiki/Selection_algorithm
      */
-    private static Cell quickselect(Cell[] arr, int length, int k) {
-        // According to the recommendation of Robert Sedgewick
-        // it worth to shuffle the array in order to guarantee
-        // the expected linear runtime complexity.
-        shuffle(arr, length);
-        return quickselect(arr, 0, length - 1, k - 1);
+    private static void selection(Cell[] arr, int length, int k) {
+        if (QUICKSELECT_BASED_PARTITION) {
+            // According to the recommendation of Robert Sedgewick
+            // it worth to shuffle the array in order to guarantee
+            // the expected linear runtime complexity.
+            shuffle(arr, length);
+            quickselect(arr, 0, length - 1, k - 1);
+        } else {
+            // Sorting-based partition
+            Arrays.sort(arr, 0, length, Comparator.comparing(c -> c.dist));
+        }
     }
 
     /**
@@ -301,8 +322,6 @@ public class LevenshteinTopK {
         arr[j] = tmp;
     }
 
-    private static final Random RANDOM = new Random(1);
-
     /**
      * Used by the Hoare's selection algorithm.
      */
@@ -312,6 +331,8 @@ public class LevenshteinTopK {
             swap(arr, i, x);
         }
     }
+
+    private static final Random RANDOM = new Random(1);
 
     /**
      * The cell of the memoization table, which handles the edit distance and

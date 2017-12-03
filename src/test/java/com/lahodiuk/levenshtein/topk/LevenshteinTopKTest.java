@@ -71,6 +71,8 @@ import com.pholser.junit.quickcheck.runner.JUnitQuickcheck;
  * 9) Given the input strings s1 and s2, it follows that the length of the
  * corresponding aligned strings (and the longest common aligned substring) must
  * be less or equal than (length(s1) + length(s2)).
+ *
+ * 10) All top-K alignments must be different.
  */
 @RunWith(JUnitQuickcheck.class)
 public class LevenshteinTopKTest {
@@ -285,6 +287,31 @@ public class LevenshteinTopKTest {
             assertTrue(alignment.alignedStr1.length() <= maxLength);
             assertTrue(alignment.alignedStr2.length() <= maxLength);
             assertTrue(alignment.commonStr.length() <= maxLength);
+        }
+    }
+
+    /**
+     * 10) All top-K alignments must be different.
+     */
+    @Property(trials = 200)
+    public void allAlignemntsMustBeDifferent(
+            @From(InputDataGenerator.class) InputData input) {
+
+        List<Alignment> results = this.alg.getAlignments(
+                input.s1, input.s2, input.topK, input.gapChar);
+
+        for (int i = 0; i < results.size() - 1; i++) {
+            Alignment ai = results.get(i);
+
+            for (int j = i + 1; j < results.size(); j++) {
+                Alignment aj = results.get(j);
+
+                boolean alignedStr1Equal = ai.alignedStr1.equals(aj.alignedStr1);
+                boolean alignedStr2Equal = ai.alignedStr2.equals(aj.alignedStr2);
+                boolean commonStrEqual = ai.commonStr.equals(aj.commonStr);
+
+                assertTrue(!(alignedStr1Equal && alignedStr2Equal && commonStrEqual));
+            }
         }
     }
 

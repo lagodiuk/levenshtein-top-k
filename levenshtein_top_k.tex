@@ -6,6 +6,7 @@
 \usepackage{mathtools}
 \usepackage{amsmath}
 \usepackage{empheq}
+\usepackage{amssymb}
 
 % argmin function
 \DeclareMathOperator*{\argmin}{arg\,min}
@@ -30,10 +31,60 @@ Let's introduce the following sets:
 
 Where $1_{(a_i \neq b_j)}$ is the indicator function equal to $0$ when $a_{i}=b_{j}$ and equal to $1$ otherwise. \\
 
-Let's consider the set $E_{a,b,k}(i, j) \subseteq E_{a,b}(i, j)$, such that $|E_{a,b,k}(i, j)| = k$, and for every $x \in E_{a,b,k}(i, j)$ and for every $y \in E_{a,b}(i, j) \setminus E_{a,b,k}(i, j)$ it follows that $x < y$. \\
+Let's consider the set $E_{a,b,k}(i, j) \subseteq E_{a,b}(i, j)$, such that $|E_{a,b,k}(i, j)| = k$  (in case if $|E_{a,b}(i, j)| < k$ then $E_{a,b,k}(i, j) = E_{a,b}(i, j)$), and for every $x \in E_{a,b,k}(i, j)$ and for every $y \in E_{a,b}(i, j) \setminus E_{a,b,k}(i, j)$ it follows that $x < y$. \\
 
 Then the set of $k$ smallest edit distances between the first $i$ characters of the string $a$ and the first $j$ characters of the string $b$ is defined as follows: $lev_{a,b}(i, j) := E_{a,b,k}(i, j)$.
 
-\hfill Yurii Lahodiuk, 26.11.2017
+\hfill Yurii Lahodiuk, 26.11.2017 \newline \\
+
+\textbf{Proof of correctness:} (proof by the smallest counterexample) \\
+
+For the sake of convenience let's introduce an auxiliary notation: $min_k(X)$ for some set $X$ with natural numbers, and for some $k \in \mathbb{N}$, which means that $min_k(X) \subseteq X$ and $\forall a \in min_k(X), \forall b \in X \setminus min_k(X)$ it follows, that $a < b$, and $|min_k(X)|=k$ (in case if $|X| < k$, then $min_k(X) = X$). \\
+
+\textit{Induction Basis:}
+
+\textit{Induction Hypothesis:}
+\begin{itemize}
+	\item The set $lev_{a,b}(i - 1, j)$ contains the $k$ smallest edit distances between the first $i - 1$ characters of the string $a$ and the first $j$ characters of the string $b$.
+	\item The set $lev_{a,b}(i, j - 1)$ contains the $k$ smallest edit distances between the first $i$ characters of the string $a$ and the first $j - 1$ characters of the string $b$.
+	\item The set $lev_{a,b}(i - 1, j - 1)$ contains the $k$ smallest edit distances between the first $i - 1$ characters of the string $a$ and the first $j - 1$ characters of the string $b$.
+\end{itemize}
+
+\textit{Inductive Step:} \\ \\
+We want to show, that the \textit{Induction Hypothesis} implies, that the set $lev_{a,b}(i, j)$ contains the $k$ smallest edit distances between the first $i$ characters of the string $a$ and the first $j$ characters of the string. \\
+\textbf{For the sake of contradictions} let's assume, that there there exists an edit distance $y \not \in lev_{a,b}(i, j)$ between the first $i$ characters of the string $a$ and the first $j$ characters of the string, such that $\exists x \in lev_{a,b}(i, j)$ for which $y < x$ (thus the set $lev_{a,b}(i, j)$ doesn't contain the $k$ smallest edit distances):
+
+\begin{equation*}
+\begin{split}
+	\exists y \not \in lev_{a,b}(i, j) \wedge \exists x \in lev_{a,b}(i, j) : y < x
+\end{split}
+\end{equation*}
+
+Let's expand the expression in a following way:
+
+\begin{equation*}
+\begin{split}
+			          & \exists y \not \in lev_{a,b}(i, j) \wedge \exists x \in lev_{a,b}(i, j) : y < x \Leftrightarrow  									&& \text{By definition of $lev_{a,b}(i, j)$} \\ 
+	\Leftrightarrow \  & \exists y \not \in min_k \Big(I_{a,b}(i, j) \cup D_{a,b}(i, j) \cup S_{a,b}(i, j) \Big) \wedge \exists x \in lev_{a,b}(i, j) : y < x \Rightarrow 	&& \text{As far as $y < x$} \\
+	\Rightarrow \  & \exists y \not \in I_{a,b}(i, j) \cup D_{a,b}(i, j) \cup S_{a,b}(i, j) \wedge \exists x \in lev_{a,b}(i, j) : y < x \Leftrightarrow 				&& \text{By definition of $I_{a,b}(i, j)$, $D_{a,b}(i, j)$, $S_{a,b}(i, j) $}\\
+	\Leftrightarrow \  & \exists y : \Big( (y - 1) \not \in lev_{a,b}(i - 1, j) \Big) \wedge \Big((y - 1) \not \in lev_{a,b}(i, j - 1)\Big) \wedge \\
+	\wedge               &  \Big((y - 1_{(a_i \neq b_j)}) \not \in lev_{a,b}(i - 1, j - 1)\Big) \wedge \exists x \in lev_{a,b}(i, j) : y < x
+\end{split}
+\end{equation*}
+
+According to the \textit{Induction Hypothesis} - the set $lev_{a,b}(i - 1, j)$ is the set of the \textbf{$k$ smallest edit distances}, thus from $(y - 1) \not \in lev_{a,b}(i - 1, j)$ it follows, that $\forall a \in lev_{a,b}(i - 1, j) \Rightarrow (y - 1) > a$ (and the same logic is applicable to the sets $lev_{a,b}(i, j - 1)$ and $lev_{a,b}(i - 1, j - 1)$):
+
+\begin{equation*}
+\begin{split}
+			    & \exists y : \Big( (y - 1) \not \in lev_{a,b}(i - 1, j) \Big) \wedge \Big((y - 1) \not \in lev_{a,b}(i, j - 1)\Big) \wedge \\
+		\wedge 	    & \Big((y - 1_{(a_i \neq b_j)}) \not \in lev_{a,b}(i - 1, j - 1)\Big) \wedge \exists x \in lev_{a,b}(i, j) : y < x  \Rightarrow \\
+	 \Rightarrow \ & \exists y : \Big( \forall a \in lev_{a,b}(i - 1, j) \Rightarrow y > a + 1 \Big) \wedge \Big(\forall b \in lev_{a,b}(i, j - 1) \Rightarrow y > b + 1\Big) \wedge \\
+		\wedge 	    & \Big(\forall c \in lev_{a,b}(i - 1, j - 1) \Rightarrow y > c + 1_{(a_i \neq b_j)} \Big) \wedge \exists x \in lev_{a,b}(i, j) : y < x  \Rightarrow \\
+	 \Rightarrow \ & \exists y : \Big( \forall x \in lev_{a,b}(i, j) \Rightarrow y > x \Big) \wedge \exists x \in lev_{a,b}(i, j) : y < x \Rightarrow \\
+	 \Rightarrow \ & Contradiction.
+\end{split}
+\end{equation*}
+
+\hfill $\blacksquare$
 
 \end{document}

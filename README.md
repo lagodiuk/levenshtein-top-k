@@ -97,3 +97,12 @@ s1 aligned: TGC__A
 s2 aligned: T_CTA_
 common str: T_C___
 ```
+## Proof of correctness
+
+The whole proof is in the [levenshtein_top_k.pdf](levenshtein_top_k.pdf)
+
+![proof1](img/proof1.png)
+![proof2](img/proof2.png)
+![proof3](img/proof3.png)
+![proof4](img/proof4.png)
+![proof5](img/proof5.png)
